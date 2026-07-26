@@ -6,7 +6,7 @@
 #   proxy_filt   -- mixedbinom_rmats padj, rMATS count/PSI filters ON  (isolates the test)
 #   proxy_nofilt -- mixedbinom_rmats padj, filters OFF                 (isolates the filters)
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 
 GT_EXON="$TRUTH_DIR/sim_exon_info"
 JGT="$TRUTH_DIR/sim_junction_gt_matched.txt"       # correct, filtered-run-matched GT

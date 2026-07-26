@@ -4,7 +4,7 @@
 # matching jaquino and the annotation-based v34 graph). Then map events to DEXSeq
 # fragments with GrASE's map_rmats_graph.R.
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 
 POST=$RMATS_OUT/rmats_post_group1_group2
 mkdir -p "$RMATS_OUT" "$POST" "$RMATS_OUT/tmp"

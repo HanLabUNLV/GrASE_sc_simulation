@@ -4,7 +4,7 @@
 # Every model used the same counts, FDR, and annotation -> only the model differs, so
 # the sens/precision are directly comparable (and betabinom must match its confirmed run).
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 
 TESTDIR="$GRASE_OUT/bipartition.test"
 OUT="$RESULTS_DIR/grid_grase"

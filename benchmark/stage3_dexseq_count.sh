@@ -3,7 +3,7 @@
 # -s no (unstranded) matches jaquino's diff_params_4 counting. Output cleaned of
 # HTSeq '_' summary lines. Count files -> count_files/{group1,group2}/sample_NN_counts.txt.
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 mkdir -p "$COUNTS_DIR/group1" "$COUNTS_DIR/group2"
 
 count_one() {

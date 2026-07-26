@@ -6,7 +6,7 @@
 # scored by the CONFIRMED evaluate_tools_dexseq_vs_gt.R DEXSeq arm vs the same
 # sim_exon_info exon-part GT (junction block skipped via a nonexistent junction_gt).
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 COUNTS="$WORK/grid/counts/exon_sc.txt"
 OUT="$RESULTS_DIR/grid_exon"; mkdir -p "$OUT"
 

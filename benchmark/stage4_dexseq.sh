@@ -2,7 +2,7 @@
 # Stage 4 (DEXSeq arm): classic DEXSeq DEU test on the per-cell exon counts.
 # null=group1 (control) vs deds=group2 (case).
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 mkdir -p "$WORK/DEXSeq/out"
 
 echo "[$(date '+%F %T')] DEXSeq DEU test..."

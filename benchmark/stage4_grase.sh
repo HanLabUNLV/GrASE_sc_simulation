@@ -4,7 +4,7 @@
 # per-cell DEXSeq counts onto the internal-AS splits; exontest runs the
 # beta-binomial EB test (betabinom_EBapprox). null=group1, deds=group2.
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 mkdir -p "$GRASE_OUT"
 
 # GrASE = internal alternative splicing + TSSTTS (alternative TSS/TTS). Run both;

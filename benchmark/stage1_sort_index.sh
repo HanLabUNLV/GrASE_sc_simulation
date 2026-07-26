@@ -2,7 +2,7 @@
 # Stage 1: coordinate-sort + index scARTist genome BAMs (name-sorted as emitted).
 # null -> group1 (control), deds -> group2 (case); rename to sample_NN.
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 mkdir -p "$BAMS_G1" "$BAMS_G2"
 
 do_cell() {

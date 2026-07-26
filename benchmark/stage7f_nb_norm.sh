@@ -3,7 +3,7 @@
 # run offset_id ((1|id)+offset) and offset_only (offset, no RE -> no integration), format to
 # the confirmed dexseq_file shape, score with the confirmed DEXSeq arm. Compare sens/spec.
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 COUNTS="$WORK/grid/counts/exon_sc.txt"
 SF="$WORK/grid/counts/exon_sizefactors.txt"
 OUT="$RESULTS_DIR/grid_exon"; mkdir -p "$OUT"

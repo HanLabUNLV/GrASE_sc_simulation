@@ -4,7 +4,7 @@
 #   - rMATS (junction GT) + DEXSeq (exon-bin GT)           -> evaluate_tools_dexseq_vs_gt.R
 # TP/FP/TN/FN + precision/recall/F1 at padj {0.01,0.05,0.1,0.2}, full + restricted.
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 mkdir -p "$RESULTS_DIR/grase" "$RESULTS_DIR/tools"
 
 # --- GrASE arm ---

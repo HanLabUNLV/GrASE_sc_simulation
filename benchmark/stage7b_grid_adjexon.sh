@@ -5,7 +5,7 @@
 # to the same bipartition.test dir (distinct per-model filenames), so
 # evaluate_bipartition_test.R scores them exactly like betabinom vs the same sim_exon_info GT.
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 export R_ENVIRON_USER=/mnt/data1/home/mirahan/scGrASE/work/env/Renviron.grase_sc   # rebuilt grase
 
 TESTDIR="$GRASE_OUT/bipartition.test"

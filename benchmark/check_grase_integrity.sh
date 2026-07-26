@@ -4,7 +4,7 @@
 # significant calls + padj to the CONFIRMED output. If they match, the rebuilt grase
 # reproduces jaquino's installed grase for betabinom -> safe to trust new-model numbers.
 set -euo pipefail
-source /mnt/data1/home/mirahan/scGrASE/benchmark/config.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config.sh"
 # use the rebuilt grase (local lib prepended, jaquino:sylvia preserved)
 export R_ENVIRON_USER=/mnt/data1/home/mirahan/scGrASE/work/env/Renviron.grase_sc
 

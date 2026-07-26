@@ -54,6 +54,13 @@ out_dir          <- args[5]
 sim_rda          <- args[6]
 junction_gt_file <- if (length(args) >= 7) args[7] else
   file.path(dirname(args[5]), "sim_junction_gt.txt")
+# OPTIONAL: evaluate a grid model's junction calls in place of native rMATS FDR, using
+# the SAME junction GT / universe / (optionally) filters -- isolates test (proxy vs
+# native). args[8] = grid result table (gene,event=<type>_<ID>,padj); args[9] = label;
+# args[10] = "no" to skip the rMATS count/PSI filter forcing on the grid calls.
+grid_results_file <- if (length(args) >= 8 && nzchar(args[8])) args[8] else NULL
+grid_label        <- if (length(args) >= 9 && nzchar(args[9])) args[9] else "grid"
+grid_apply_filter <- if (length(args) >= 10) tolower(args[10]) != "no" else TRUE
 
 padj_thresholds <- c(0.01, 0.05, 0.1, 0.2)
 
@@ -259,6 +266,27 @@ if (file.exists(junction_gt_file)) {
                 etype, nrow(df), sum(pass_filter), sum(in_restricted)))
   }
   rmats_fdr <- bind_rows(rmats_fdr_rows)
+
+  # OPTIONAL grid override: swap native rMATS FDR for a grid model's padj on the SAME
+  # junction events, keeping the SAME GT, universe, and (unless disabled) rMATS filters,
+  # so the comparison isolates the test. rMATS-tested events with no grid call get FDR NA
+  # -> imputed to 1 below (same as untested). Native path untouched when unset.
+  if (!is.null(grid_results_file)) {
+    cat(sprintf("\n[grid] using grid padj from %s as '%s' (rMATS count/PSI filter %s)\n",
+                grid_results_file, grid_label, if (grid_apply_filter) "ON" else "OFF"))
+    gr <- read.table(grid_results_file, header = TRUE, sep = "\t",
+                     stringsAsFactors = FALSE, quote = "")
+    gr$event_type <- sub("_.*$", "", gr$event)          # "<type>_<ID>" -> type / ID
+    gr$ID         <- sub("^[^_]*_", "", gr$event)
+    gr <- gr %>% group_by(event_type, ID) %>%
+      summarise(grid_padj = min(padj, na.rm = TRUE), .groups = "drop")
+    gr$ID <- as.character(gr$ID)
+    rmats_fdr$ID <- as.character(rmats_fdr$ID)
+    rmats_fdr <- merge(rmats_fdr[, setdiff(names(rmats_fdr), "FDR")], gr,
+                       by = c("event_type", "ID"), all.x = TRUE)
+    names(rmats_fdr)[names(rmats_fdr) == "grid_padj"] <- "FDR"
+    if (!grid_apply_filter) rmats_fdr$rmats_pass_filter <- TRUE
+  }
 
   jgt$ID <- as.character(jgt$ID)
   rmats_fdr$ID <- as.character(rmats_fdr$ID)

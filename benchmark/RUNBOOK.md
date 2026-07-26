@@ -6,8 +6,15 @@ sources `config.sh`. Results/findings for each phase are in `results/*.md`.
 
 IMPORTANT: `config.sh` holds SERVER-SPECIFIC absolute paths and interpreter locations
 (system R + jaquino's R_LIBS, rmats.4.2.0 conda, smartSim python, ~/DICE reference,
-scARTist output dirs). Edit it for any other environment before running. Stages run from
-the `~/scGrASE` workspace (paths are relative to it).
+scARTist output dirs). Edit it for any other environment before running.
+
+Location: this harness lives in the `GrASE_sc_simulation` fork at `<fork>/benchmark/`.
+Each stage sources its sibling `config.sh` (relative to the script), so run it from
+anywhere -- e.g. `bash GrASE_simulation/benchmark/stage7e_exon_arm.sh` from the
+`~/scGrASE` workspace, or `bash benchmark/stage7e_exon_arm.sh` from inside the fork.
+`config.sh` still points data/output paths (`SCGRASE`, `WORK`) at the `~/scGrASE`
+workspace, so results land there regardless of where the scripts live. Command paths
+below are written relative to the fork.
 
 ## 0. Config
     # edit paths/interpreters first

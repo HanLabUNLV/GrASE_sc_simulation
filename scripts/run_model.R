@@ -32,6 +32,10 @@ opt <- parse_args(OptionParser(option_list = list(
   make_option("--padj_threshold", type = "double", default = 0.05),
   make_option("--min_effect",     type = "double", default = 0,
               help = "min |effect_size| for the significant flag (0 = off)"),
+  make_option("--norm", type = "character", default = "none",
+              help = "NB normalization: none | offset_id | offset_only (size-factor offset)"),
+  make_option("--sizefactors", type = "character", default = NULL,
+              help = "size-factor file (cell, sf) for --norm; joined to counts by 'cell'"),
   make_option("--mc_cores", type = "integer", default = 16L)
 )))
 
@@ -63,6 +67,18 @@ sc$y <- sc$diff
 cat(sprintf("[run_model] %s counts: %d rows, %d events, %d groups\n",
             basename(opt$counts), nrow(sc),
             nrow(distinct(sc, gene, event)), nlevels(sc$groups)))
+
+# size-factor offset (NB normalization test): attach per-cell log size factor.
+if (opt$norm != "none") {
+  if (is.null(opt$sizefactors)) stop("--norm ", opt$norm, " requires --sizefactors")
+  if (!"cell" %in% names(sc)) stop("--norm requires a 'cell' column in the counts")
+  sf <- read.table(opt$sizefactors, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+  sc <- sc %>% left_join(sf[, c("cell", "sf")], by = "cell")
+  if (any(is.na(sc$sf))) stop("some cells have no size factor")
+  sc$log_sf <- log(sc$sf)
+  cat(sprintf("[run_model] size-factor offset attached (norm=%s, sf range %.3f-%.3f)\n",
+              opt$norm, min(sc$sf), max(sc$sf)))
+}
 
 ## ---- model dispatch ----------------------------------------------------------
 # pick the per-event dispersion estimator (EB only) and the test plugin.
@@ -100,7 +116,9 @@ if (disp == "EB") {
   gd <- group_by_event(sc, "diff", "n")
   cat(sprintf("[run_model] EB: estimating dispersion for %d event-groups...\n", length(gd)))
   phis <- bind_rows(mclapply(gd, function(dd) {
-    r <- tryCatch(estimator(dd), error = function(e) NULL)
+    r <- tryCatch(
+      if (opt$model == "negbinom") estimator(dd, norm = opt$norm) else estimator(dd),
+      error = function(e) NULL)
     if (!is.null(r) && has_comp) r$comparison <- dd$comparison[1]
     r
   }, mc.cores = opt$mc_cores))
@@ -126,6 +144,7 @@ err_log <- sub("\\.[^.]*$", ".errors.log", opt$out)
 extra <- list(sc = sc, test_fn = test_fn, err_log = err_log,
               model_label = model_label, L = L, mc_cores = opt$mc_cores)
 if (opt$model == "mixedbinom") extra$disp <- disp     # mixed test takes disp
+if (opt$model == "negbinom")   extra$norm <- opt$norm  # NB test takes normalization mode
 results <- do.call(run_one_comparison, extra)
 
 if (is.null(results) || nrow(results) == 0) {

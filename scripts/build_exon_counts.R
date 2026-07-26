@@ -72,6 +72,7 @@ sc <- data.frame(
   diff   = as.integer(M),
   n      = as.integer(Gn),
   groups = rep(groups, each = nrow(M)),
+  cell   = rep(seq_len(ncells), each = nrow(M)),   # global cell index (for size-factor offsets)
   stringsAsFactors = FALSE)
 sc <- sc[!is.na(sc$n) & sc$n >= opt$min_gene_total & !is.na(sc$diff) & sc$diff >= 0, ]
 sc$groups <- factor(sc$groups, levels = c("group1", "group2"))   # control first

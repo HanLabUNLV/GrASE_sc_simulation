@@ -136,9 +136,18 @@ build_summary <- function(per_gene_df) {
 
 # load sim gene type labels
  
-cat("Loading simulate.rda...\n")
+cat("Loading simulation truth...\n")
 dge_genes <- dte_genes <- dtu_genes <- character(0)
-if (file.exists(sim_rda)) {
+if (grepl("\\.txt$", sim_rda, ignore.case = TRUE) && file.exists(sim_rda)) {
+  deds <- read.table(sim_rda, header = TRUE, sep = "\t",
+                     stringsAsFactors = FALSE, check.names = FALSE)
+  dtu_genes <- sort(unique(deds$geneID[deds$gene_ds_status == 1]))
+  de_all    <- sort(unique(deds$geneID[deds$gene_de_status == 1]))
+  dge_genes <- setdiff(de_all, dtu_genes)
+  dte_genes <- character(0)
+  cat(sprintf("  (scARTist) DGE: %d  DTE: %d  DTU: %d genes\n",
+              length(dge_genes), length(dte_genes), length(dtu_genes)))
+} else if (file.exists(sim_rda)) {
   load(sim_rda)
   if (exists("dge.genes")) dge_genes <- dge.genes
   if (exists("dte.genes")) dte_genes <- dte.genes
@@ -146,7 +155,7 @@ if (file.exists(sim_rda)) {
   cat(sprintf("  DGE: %d  DTE: %d  DTU: %d genes\n",
               length(dge_genes), length(dte_genes), length(dtu_genes)))
 } else {
-  warning("simulate.rda not found; sim_type will be 'Unknown'")
+  warning("simulation truth not found; sim_type will be 'Unknown'")
 }
 
 get_sim_type <- function(gene) {
@@ -190,11 +199,18 @@ if (file.exists(junction_gt_file)) {
   cat(sprintf("\nLoading junction GT: %s\n", junction_gt_file))
   jgt <- read.table(junction_gt_file, header = TRUE, sep = "\t",
                     stringsAsFactors = FALSE)
-  # exclude untestable events: either side empty -> PSI constant/undefined,
-  # cannot be scored (not a true negative).
-  jgt <- jgt[!(jgt$n_inc_tx == 0 | jgt$n_skip_tx == 0), ]
-  cat(sprintf("  %d testable events (%d GT-positive, %d GT-negative)\n",
-              nrow(jgt), sum(jgt$gt_positive), sum(!jgt$gt_positive)))
+  # Structurally untestable events (either side empty -> PSI constant/undefined)
+  # are rMATS's own filter logic, but they must still be ACCOUNTED FOR in the FULL
+  # (fromGTF) universe as forced-non-significant NEGATIVE CALLS: a GT-positive one
+  # -> FN (a real miss), a GT-negative one -> TN. Previously these were dropped
+  # from both universes, silently losing the GT-positive ones as FN. The RESTRICTED
+  # universe still excludes them (they cannot be scored on their own merits).
+  jgt$structurally_testable <- !(jgt$n_inc_tx == 0 | jgt$n_skip_tx == 0)
+  cat(sprintf("  %d fromGTF events (%d GT-positive) | %d structurally testable (%d GT-positive, %d untestable-but-GT-positive kept as FN in full)\n",
+              nrow(jgt), sum(jgt$gt_positive),
+              sum(jgt$structurally_testable),
+              sum(jgt$structurally_testable & jgt$gt_positive),
+              sum(!jgt$structurally_testable & jgt$gt_positive)))
 
   csv_mean <- function(x) {
     v <- suppressWarnings(as.numeric(strsplit(x, ",")[[1]]))
@@ -266,7 +282,8 @@ if (file.exists(junction_gt_file)) {
         ev <- jgt_by_gene[[gene]]
         if (is.null(ev) || nrow(ev) == 0) return(NULL)
         if (restricted) {
-          ev <- ev[ev$rmats_tested & ev$rmats_in_restricted, ]
+          ev <- ev[ev$rmats_tested & ev$rmats_in_restricted &
+                     ev$structurally_testable, ]
           if (nrow(ev) == 0) return(NULL)
         }
         sig <- !is.na(ev$FDR) & ev$FDR < thr
@@ -335,7 +352,8 @@ if (file.exists(junction_gt_file)) {
     rows <- list()
     for (thr in padj_thresholds) {
       d <- jgt_merged
-      if (restricted) d <- d[d$rmats_tested & d$rmats_in_restricted, ]
+      if (restricted) d <- d[d$rmats_tested & d$rmats_in_restricted &
+                               d$structurally_testable, ]
       for (et in c("SE", "A3SS", "A5SS", "RI", "ALL")) {
         dd  <- if (et == "ALL") d else d[d$event_type == et, ]
         if (nrow(dd) == 0) next

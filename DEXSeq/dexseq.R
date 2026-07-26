@@ -37,12 +37,12 @@ print(opt)
 #  stop("Please provide all required options")
 #}
 #
-# Assign required options
-#GFFfile = opt$gff
-#celltype1 = opt$cell1
-#celltype2 = opt$cell2
-#outdir = opt$outdir
-#countdir = opt$cntdir
+# Assign required options (were commented out upstream -> defaults were used)
+if (!is.null(opt$gff))    GFFfile   = opt$gff
+if (!is.null(opt$cell1))  celltype1 = opt$cell1
+if (!is.null(opt$cell2))  celltype2 = opt$cell2
+if (!is.null(opt$outdir)) outdir    = opt$outdir
+if (!is.null(opt$cntdir)) countdir  = opt$cntdir
 if (!dir.exists(outdir)) {
   dir.create(outdir, recursive = TRUE)
 }

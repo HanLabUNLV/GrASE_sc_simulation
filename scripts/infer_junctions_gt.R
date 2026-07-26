@@ -73,14 +73,42 @@ if (sharded) {
 }
 
 # --- load simulation data ---------------------------------------------------
+# From EITHER a swimdown simulate.rda OR a scARTist simulation_deds.txt (.txt).
+# Objects built either way:
+#   sim.counts.mat: transcripts x 2 conditions (expected read counts; PSI diag only)
+#   iso.dtu:        named logical; TRUE for manipulated DTU transcripts (2 per gene)
+#   iso.dte:        named logical; TRUE for manipulated DTE transcripts (1 per gene)
+#   txdf:           GENEID, TXNAME, ntx
+#   dge.genes / dte.genes / dtu.genes
 
-cat("Loading simulate.rda...\n")
-load(sim_rda)
-# sim.counts.mat: transcripts x 2 conditions (expected read counts)
-# iso.dtu:        named logical; TRUE for manipulated DTU transcripts (2 per gene)
-# iso.dte:        named logical; TRUE for manipulated DTE transcripts (1 per gene)
-# txdf:           GENEID, TXNAME, ntx
-# dge.genes / dte.genes / dtu.genes
+if (grepl("\\.txt$", sim_rda, ignore.case = TRUE)) {
+  cat("Loading scARTist simulation_deds.txt...\n")
+  deds <- read.table(sim_rda, header = TRUE, sep = "\t",
+                     stringsAsFactors = FALSE, check.names = FALSE)
+  txdf <- data.frame(GENEID = deds$geneID, TXNAME = deds$transcriptID,
+                     ntx = deds$nbr_isoforms, stringsAsFactors = FALSE)
+  iso.dtu <- setNames(deds$transcript_ds_status == 1, deds$transcriptID)
+  iso.dte <- setNames(rep(FALSE, nrow(deds)), deds$transcriptID)   # scARTist: no DTE
+  dtu.genes <- sort(unique(deds$geneID[deds$gene_ds_status == 1]))
+  de.all    <- sort(unique(deds$geneID[deds$gene_de_status == 1]))
+  dge.genes <- setdiff(de.all, dtu.genes)
+  dte.genes <- character(0)
+  # counts for the diagnostic PSI columns: null (sibling file) vs deds expected_count
+  deds_counts <- setNames(deds$expected_count, deds$transcriptID)
+  null_file <- file.path(dirname(sim_rda), "simulation_null.txt")
+  if (file.exists(null_file)) {
+    nl <- read.table(null_file, header = TRUE, sep = "\t",
+                     stringsAsFactors = FALSE, check.names = FALSE)
+    null_counts <- setNames(nl$expected_count, nl$transcriptID)[deds$transcriptID]
+  } else {
+    null_counts <- deds_counts
+  }
+  sim.counts.mat <- cbind(null_counts, deds_counts)
+  rownames(sim.counts.mat) <- deds$transcriptID
+} else {
+  cat("Loading simulate.rda...\n")
+  load(sim_rda)
+}
 
 get_sim_type <- function(gene) {
   if (gene %in% dte.genes) return("DTE")

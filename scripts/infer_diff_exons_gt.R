@@ -27,33 +27,60 @@
 #                       level iii (unique to changed tx only):     dte_gt_level == "unique"
 #
 # Usage:
-#   Rscript infer_diff_exons_gt.R <gff_dir> <simulate_rda> <out_dir>
+#   Rscript infer_diff_exons_gt.R <gff_dir> <truth_input> <out_dir>
+#
+# <truth_input> is either a swimdown simulate.rda (original) OR a scARTist
+# per-config simulation_deds.txt (single-cell). The .txt is auto-detected by
+# extension and read directly -- no simulate.rda needed, since it already carries
+# the same information (transcript_ds_status / gene_ds_status / gene_de_status).
 
 suppressPackageStartupMessages(library(dplyr))
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 3) {
-  cat("Usage: Rscript infer_diff_exons_gt.R <gff_dir> <simulate_rda> <out_dir>\n")
+  cat("Usage: Rscript infer_diff_exons_gt.R <gff_dir> <truth_input(.rda|.txt)> <out_dir>\n")
   quit(save = "no", status = 1)
 }
-gff_dir <- args[1]
-sim_rda  <- args[2]
+gff_dir  <- args[1]
+truth_in <- args[2]
 out_dir  <- args[3]
 
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-# Load simulation data 
+# Load simulation truth
+# Builds the same objects the GT logic below uses (txdf, fold_changes, and the
+# dge/dte/dtu gene sets) from EITHER a swimdown simulate.rda or a scARTist
+# simulation_deds.txt. Everything downstream is source-agnostic.
 
-cat("Loading simulate.rda...\n")
-load(sim_rda)
-# Required objects:
-#   txdf         data.frame  GENEID, TXNAME, ntx  simulation gene/tx universe
-#   fold_changes matrix      rows = transcript IDs, cols = conditions
-#   dge.genes / dte.genes / dtu.genes  character vectors
+if (grepl("\\.rda$", truth_in, ignore.case = TRUE)) {
+  cat("Loading simulate.rda...\n")
+  load(truth_in)                       # provides txdf, fold_changes, {dge,dte,dtu}.genes
+  dge_genes <- if (exists("dge.genes")) dge.genes else character(0)
+  dte_genes <- if (exists("dte.genes")) dte.genes else character(0)
+  dtu_genes <- if (exists("dtu.genes")) dtu.genes else character(0)
+} else {
+  cat("Loading scARTist simulation_deds.txt...\n")
+  deds <- read.table(truth_in, header = TRUE, sep = "\t",
+                     stringsAsFactors = FALSE, check.names = FALSE)
+  req <- c("transcriptID", "geneID", "nbr_isoforms",
+           "transcript_ds_status", "gene_ds_status", "gene_de_status")
+  miss <- setdiff(req, colnames(deds))
+  if (length(miss)) stop("truth txt missing columns: ", paste(miss, collapse = ", "))
 
-dge_genes <- if (exists("dge.genes")) dge.genes else character(0)
-dte_genes <- if (exists("dte.genes")) dte.genes else character(0)
-dtu_genes <- if (exists("dtu.genes")) dtu.genes else character(0)
+  txdf <- data.frame(GENEID = deds$geneID, TXNAME = deds$transcriptID,
+                     ntx = deds$nbr_isoforms, stringsAsFactors = FALSE)
+  # "changed" transcripts must be EXACTLY the DTU-swapped isoforms
+  # (transcript_ds_status==1); mark only those != 1 so `any(fc != 1)` selects them.
+  # (DE fold change is captured separately via dge.genes -> all-negative bins.)
+  fold_changes <- matrix(1, nrow = nrow(deds), ncol = 2,
+                         dimnames = list(deds$transcriptID, c("cond1", "cond2")))
+  fold_changes[deds$transcript_ds_status == 1, "cond2"] <- 2
+
+  dtu_genes <- sort(unique(deds$geneID[deds$gene_ds_status == 1]))
+  de_all    <- sort(unique(deds$geneID[deds$gene_de_status == 1]))
+  dge_genes <- setdiff(de_all, dtu_genes)   # DE-only; kept distinct from DTU
+  dte_genes <- character(0)                 # scARTist injects DE + DTU only
+}
 
 cat(sprintf("  DGE: %d  DTE: %d  DTU: %d\n",
             length(dge_genes), length(dte_genes), length(dtu_genes)))
